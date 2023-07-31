@@ -1,6 +1,13 @@
 var express = require('express');
 var router = express.Router();
 
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
+
+// get config vars
+dotenv.config();
+
+
 let users = [{
   'name' : 'barry',
   'role' : 'manager',
@@ -18,11 +25,7 @@ router.get('/', function(req, res, next) {
 
 router.post('/', function(req, res, next) {
   if(req.body){
-   const userExist =  users.find(x=>{
-       return x.name === req.body.name
-    });
-    console.log(userExist," user");
-    if(userExist){
+    if(userExist(req.body.name)){
       userExist.role = req.body.role;
       userExist.salary = req.body.salary;
     }else{
@@ -35,19 +38,36 @@ router.post('/', function(req, res, next) {
 
 router.delete('/', function(req, res, next) {
   if(req.body){
-    const userExist =  users.find(x=>{
-        return x.name === req.body.name
-     });
-     console.log(userExist," user");
-     if(userExist){
+     if(userExist(req.body.name)){
        users = users.filter(x=> x.name !== req.body.name);
        res.send(users);
      }else{
-       console.log("user does not exist");
        res.send("user does not exist.");
      }
 
    }
 });
+
+router.post('/token', function(req, res, next) {
+  if(userExist(req.body.name)){
+    const token = generateAccessToken({ username: req.body.username });
+    res.json(token);
+  }else{
+    res.status(400).send("User not found");
+  }
+ 
+});
+
+
+function generateAccessToken(username) {
+  return jwt.sign(username, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
+}
+
+function userExist(name){
+  const userExist =  users.find(x=>{
+    return x.name === name
+ });
+ return userExist;
+}
 
 module.exports = router;
