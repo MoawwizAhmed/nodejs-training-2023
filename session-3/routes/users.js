@@ -3,52 +3,63 @@ var router = express.Router();
 
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
-
+const User = require('../models/user');
 // get config vars
 dotenv.config();
 
 
-let users = [{
-  'name' : 'barry',
-  'role' : 'manager',
-  'salary' : 400000
-},
-{
-  'name' : 'allen',
-  'role' : 'manager',
-  'salary' : 600000
-}]
 /* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send(users);
-});
-
-router.post('/', function(req, res, next) {
-  if(req.body){
-    if(userExist(req.body.name)){
-      userExist.role = req.body.role;
-      userExist.salary = req.body.salary;
-    }else{
-      users.push(req.body);
-    }
-            
+router.get('/', async(req, res, next) => {
+  try {
+    const users = await User.find({});
+    res.send(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
   }
-  res.send(users);
 });
 
-router.delete('/', function(req, res, next) {
-  if(req.body){
-     if(userExist(req.body.name)){
-       users = users.filter(x=> x.name !== req.body.name);
-       res.send(users);
-     }else{
-       res.send("user does not exist.");
-     }
+router.post('/', async (req, res, next) => {
+  const { name, email, type } = req.body;
 
-   }
+  try {
+    const user = new User({ name, email, type });
+    user.password = "abc";
+    await user.save();
+    res.send(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
 });
 
-router.post('/token', function(req, res, next) {
+router.put('/:id', async (req, res, next) => {
+  const { id } = req.params;
+  const { name, email, type } = req.body;
+
+  try {
+    const user = await User.findByIdAndUpdate(id, { name, email, type }, { new: true });
+    res.send(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
+});
+
+
+router.delete('/:id', async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findByIdAndDelete(id);
+    res.send(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
+});
+
+router.post('/token', async (req, res, next) => {
   if(userExist(req.body.name)){
     const token = generateAccessToken({ username: req.body.username });
     res.json(token);
@@ -58,7 +69,7 @@ router.post('/token', function(req, res, next) {
  
 });
 
-router.post('/auth', authenticateToken ,function(req, res, next) {
+router.post('/auth', authenticateToken ,async (req, res, next) => {
   if(userExist(req.body.name)){
     res.send("Auth is working");
   }else{
